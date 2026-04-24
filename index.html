@@ -314,7 +314,7 @@
             };
 
             return (
-                <div className="min-h-screen p-4 flex flex-col items-center">
+                <div className="min-h-screen p-2 sm:p-4 flex flex-col items-center">
                     
                     {/* Скрытый аудио-тег, чтобы музыка играла при переключении вкладок */}
                     <audio 
@@ -330,10 +330,10 @@
                         
                         {/* Заголовок окна */}
                         <div className="bg-gradient-to-r from-[#000080] to-[#1084d0] p-1 flex justify-between items-center text-white px-2">
-                            <span className="font-bold text-sm flex items-center gap-2">
+                            <span className="font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate pr-2">
                                 🏠 C:\WINDOWS\Desktop\Family_Archive.exe
                             </span>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-shrink-0">
                                 <button className="btn-win98 py-0 px-2 text-xs">_</button>
                                 <button className="btn-win98 py-0 px-2 text-xs">□</button>
                                 <button className="btn-win98 py-0 px-2 text-xs bg-red-400">X</button>
@@ -349,26 +349,26 @@
                         </div>
 
                         {/* Основной контент */}
-                        <div className="bg-white m-2 p-6 win98-border-inset min-h-[500px] overflow-y-auto text-black">
+                        <div className="bg-white m-1 sm:m-2 p-3 sm:p-6 win98-border-inset min-h-[400px] sm:min-h-[500px] overflow-y-auto overflow-x-hidden text-black">
                             
                             {/* ТАБ: ГЛАВНАЯ */}
                             {activeTab === 'home' && (
-                                <div className="text-center space-y-6">
-                                    <h2 className="text-4xl text-blue-800 font-bold italic underline">Добро пожаловать в наше прошлое!</h2>
+                                <div className="text-center space-y-4 sm:space-y-6">
+                                    <h2 className="text-2xl sm:text-4xl text-blue-800 font-bold italic underline">Добро пожаловать в наше прошлое!</h2>
                                     <div className="flex justify-center">
-                                        <img src="https://web.archive.org/web/20091027053531im_/http://geocities.com/Heartland/Acres/1814/welcome1.gif" alt="Welcome" />
+                                        <img src="https://web.archive.org/web/20091027053531im_/http://geocities.com/Heartland/Acres/1814/welcome1.gif" alt="Welcome" className="max-w-full h-auto px-2" />
                                     </div>
-                                    <p className="text-xl max-w-2xl mx-auto">
+                                    <p className="text-base sm:text-xl max-w-2xl mx-auto">
                                         Этот сайт создан для того, чтобы хранить самые теплые моменты нашей семьи. 
                                         Здесь вы найдете фотографии Алима, Ибраима, Биляла, Амины и всех наших близких.
                                     </p>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-2 border-dashed border-gray-300">
-                                        <div className="p-2 bg-yellow-100 border">Нас посетили: <b>{visits}</b> раз</div>
-                                        <div className="p-2 bg-blue-100 border">Фотографий: <b>{photos.length}</b></div>
-                                        <div className="p-2 bg-green-100 border">Статус: <b>Online</b></div>
-                                        <div className="p-2 bg-purple-100 border">Год: <b>2000-е</b></div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 p-2 sm:p-4 border-2 border-dashed border-gray-300 text-xs sm:text-base">
+                                        <div className="p-2 bg-yellow-100 border">Нас посетили: <br className="sm:hidden" /><b>{visits}</b> раз</div>
+                                        <div className="p-2 bg-blue-100 border">Фотографий: <br className="sm:hidden" /><b>{photos.length}</b></div>
+                                        <div className="p-2 bg-green-100 border">Статус: <br className="sm:hidden" /><b>Online</b></div>
+                                        <div className="p-2 bg-purple-100 border">Год: <br className="sm:hidden" /><b>2000-е</b></div>
                                     </div>
-                                    <marquee className="text-red-600 font-bold text-lg">!!! СМОТРИТЕ НОВЫЕ ФОТОГРАФИИ В РАЗДЕЛЕ АЛЬБОМ !!!</marquee>
+                                    <marquee className="text-red-600 font-bold text-sm sm:text-lg">!!! СМОТРИТЕ НОВЫЕ ФОТОГРАФИИ В РАЗДЕЛЕ АЛЬБОМ !!!</marquee>
                                 </div>
                             )}
 
@@ -381,7 +381,7 @@
                                                 <img src={photo.src} className="max-w-full max-h-full object-contain" />
                                                 <button 
                                                     onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
-                                                    className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1 border-t border-l border-white border-r border-b border-black opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1 border-t border-l border-white border-r border-b border-black opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                                 >
                                                     УДАЛИТЬ
                                                 </button>
@@ -487,18 +487,18 @@
                                         {guestMessages.map(msg => (
                                             <div key={msg.id} className="p-3 border-b border-gray-200 group relative">
                                                 <div className="flex justify-between text-xs text-gray-500 mb-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-blue-700">{msg.name}</span>
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="font-bold text-blue-700 break-words">{msg.name}</span>
                                                         <span>{msg.date}</span>
                                                     </div>
                                                     <button 
                                                         onClick={() => deleteGuestMessage(msg.id)}
-                                                        className="bg-[#c0c0c0] text-black text-[10px] px-1 win98-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                                                        className="bg-[#c0c0c0] text-black text-[10px] px-1 win98-border opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
                                                     >
                                                         УДАЛИТЬ
                                                     </button>
                                                 </div>
-                                                <p className="italic text-gray-800">"{msg.text}"</p>
+                                                <p className="italic text-gray-800 break-words">"{msg.text}"</p>
                                             </div>
                                         ))}
                                         {guestMessages.length === 0 && <p className="text-center text-gray-400 italic">Здесь пока пусто. Поделитесь вашей первой историей!</p>}
@@ -509,20 +509,20 @@
                         </div>
 
                         {/* Статус бар внизу */}
-                        <div className="bg-[#c0c0c0] p-1 flex gap-2 border-t border-gray-400 text-xs text-black">
-                            <div className="win98-border-inset px-2 flex-grow">Готово</div>
-                            <div className="win98-border-inset px-4">My Computer</div>
+                        <div className="bg-[#c0c0c0] p-1 flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 border-t border-gray-400 text-[10px] sm:text-xs text-black">
+                            <div className="win98-border-inset px-2 flex-grow truncate">Готово</div>
+                            <div className="win98-border-inset px-2 sm:px-4 truncate">My Computer</div>
                             <div className="win98-border-inset px-2">100%</div>
                         </div>
                     </div>
 
                     {/* Плавающая кнопка зависит от вкладки */}
                     {activeTab === 'music' ? (
-                        <button onClick={() => setIsMusicModalOpen(true)} className="fixed bottom-6 right-6 btn-win98 shadow-win98 py-4 px-6 scale-110 flex items-center gap-2">
+                        <button onClick={() => setIsMusicModalOpen(true)} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 btn-win98 shadow-win98 py-3 px-4 sm:py-4 sm:px-6 scale-90 sm:scale-110 flex items-center gap-1 sm:gap-2 z-50">
                             <span>🎵</span> ДОБАВИТЬ ТРЕК
                         </button>
                     ) : (
-                        <button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 btn-win98 shadow-win98 py-4 px-6 scale-110 flex items-center gap-2">
+                        <button onClick={() => setIsModalOpen(true)} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 btn-win98 shadow-win98 py-3 px-4 sm:py-4 sm:px-6 scale-90 sm:scale-110 flex items-center gap-1 sm:gap-2 z-50">
                             <span>➕</span> НОВОЕ ФОТО
                         </button>
                     )}
@@ -599,10 +599,10 @@
                                     <span className="font-bold text-xs uppercase">IMAGE_VIEWER.EXE</span>
                                     <button onClick={() => setViewingPhoto(null)} className="bg-[#c0c0c0] text-black px-1 text-xs border">X</button>
                                 </div>
-                                <div className="p-4 flex flex-col items-center bg-gray-600">
-                                    <img src={viewingPhoto.src} className="max-h-[70vh] shadow-2xl border-4 border-white" />
-                                    <div className="bg-[#c0c0c0] p-4 mt-4 win98-border w-full text-center">
-                                        <p className="text-blue-900 font-bold text-xl italic">{viewingPhoto.caption}</p>
+                                <div className="p-2 sm:p-4 flex flex-col items-center bg-gray-600 overflow-hidden">
+                                    <img src={viewingPhoto.src} className="max-h-[60vh] sm:max-h-[70vh] max-w-full object-contain shadow-2xl border-2 sm:border-4 border-white" />
+                                    <div className="bg-[#c0c0c0] p-3 sm:p-4 mt-4 win98-border w-full text-center">
+                                        <p className="text-blue-900 font-bold text-base sm:text-xl italic break-words">{viewingPhoto.caption}</p>
                                     </div>
                                 </div>
                             </div>
