@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Моя Любимая Семья - Ностальгия 2.0</title>
     <link rel="icon" type="image/png" href="images/favicon.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -57,6 +58,14 @@
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
+
+        const SUPABASE_URL = 'https://uqfbphufpjbovmifieyt.supabase.co/rest/v1/';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxZmJwaHVmcGpib3ZtaWZpZXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzUyNTEsImV4cCI6MjA5MjYxMTI1MX0.IDBaE23z1eIjbjqk-DuSWtO41YUWlXIrN7elt80QD6o';
+
+        const supabase = window.supabase.createClient(
+            SUPABASE_URL,
+            SUPABASE_ANON_KEY
+        );
 
         const INITIAL_PHOTOS = [
             { id: 1, src: "image_9663f1.jpg", caption: "Алим 1999 года рождения" },
