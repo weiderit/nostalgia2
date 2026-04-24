@@ -59,7 +59,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const SUPABASE_URL = 'https://uqfbphufpjbovmifieyt.supabase.co/rest/v1/';
+        const SUPABASE_URL = 'https://uqfbphufpjbovmifieyt.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVxZmJwaHVmcGpib3ZtaWZpZXl0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMzUyNTEsImV4cCI6MjA5MjYxMTI1MX0.IDBaE23z1eIjbjqk-DuSWtO41YUWlXIrN7elt80QD6o';
 
         const supabase = window.supabase.createClient(
@@ -86,7 +86,7 @@
 
         function App() {
             const [activeTab, setActiveTab] = useState('home');
-            const [photos, setPhotos] = useState(INITIAL_PHOTOS);
+            const [photos, setPhotos] = useState([]);
             const [guestMessages, setGuestMessages] = useState([]);
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [viewingPhoto, setViewingPhoto] = useState(null);
@@ -101,7 +101,7 @@
             const [guestText, setGuestText] = useState('');
 
             // Состояния для музыки
-            const [playlist, setPlaylist] = useState(INITIAL_PLAYLIST);
+            const [playlist, setPlaylist] = useState([]);
             const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
             const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
@@ -112,40 +112,66 @@
             const audioRef = useRef(null);
 
             useEffect(() => {
-                const savedPhotos = localStorage.getItem('family_photos_v3');
-                const savedGuest = localStorage.getItem('family_guestbook');
-                const savedPlaylist = localStorage.getItem('family_playlist');
-                const savedVisits = localStorage.getItem('family_visits');
-                
-                if (savedPhotos) setPhotos(JSON.parse(savedPhotos));
-                if (savedGuest) setGuestMessages(JSON.parse(savedGuest));
-                if (savedPlaylist) setPlaylist(JSON.parse(savedPlaylist));
+                const loadData = async () => {
+                    // Загрузка фотографий из Supabase
+                    const { data: dbPhotos, error: photosError } = await supabase.from('photos').select('*').order('id', { ascending: true });
+                    if (dbPhotos && dbPhotos.length > 0) {
+                        setPhotos(dbPhotos);
+                    } else if (!photosError) {
+                        // Если таблица пуста, загружаем начальные фото для всех
+                        setPhotos(INITIAL_PHOTOS);
+                        await supabase.from('photos').upsert(INITIAL_PHOTOS);
+                    }
 
-                // Логика счетчика посещений
-                const currentVisits = savedVisits ? parseInt(savedVisits, 10) : 0;
-                const newVisits = currentVisits + 1;
-                setVisits(newVisits);
-                localStorage.setItem('family_visits', newVisits.toString());
+                    // Загрузка гостевой книги
+                    const { data: dbGuestbook } = await supabase.from('guestbook').select('*').order('id', { ascending: false });
+                    if (dbGuestbook) {
+                        setGuestMessages(dbGuestbook);
+                    }
+
+                    // Загрузка плейлиста
+                    const { data: dbPlaylist, error: playlistError } = await supabase.from('playlist').select('*').order('id', { ascending: true });
+                    if (dbPlaylist && dbPlaylist.length > 0) {
+                        setPlaylist(dbPlaylist);
+                    } else if (!playlistError) {
+                        // Загружаем начальный плейлист, если пусто
+                        setPlaylist(INITIAL_PLAYLIST);
+                        await supabase.from('playlist').upsert(INITIAL_PLAYLIST);
+                    }
+
+                    // Логика счетчика посещений через Supabase
+                    const { data: dbVisits } = await supabase.from('visits').select('count').eq('id', 1).single();
+                    const currentVisits = dbVisits ? dbVisits.count : 0;
+                    const newVisits = currentVisits + 1;
+                    
+                    setVisits(newVisits);
+                    await supabase.from('visits').upsert({ id: 1, count: newVisits });
+                };
+
+                loadData();
             }, []);
 
-            const saveState = (newPhotos) => {
-                setPhotos(newPhotos);
-                localStorage.setItem('family_photos_v3', JSON.stringify(newPhotos));
-            };
-
-            const handleAddPhoto = (e) => {
+            const handleAddPhoto = async (e) => {
                 e.preventDefault();
-                const newP = { id: Date.now(), src: newPhotoPreview, caption: newCaption || 'Без названия' };
-                const updated = [...photos, newP];
-                saveState(updated);
+                const newPhotoId = Date.now();
+                const newP = { id: newPhotoId, src: newPhotoPreview, caption: newCaption || 'Без названия' };
+                
+                // Оптимистичное обновление UI
+                setPhotos(prev => [...prev, newP]);
                 setIsModalOpen(false);
                 setNewPhotoPreview(null);
                 setNewCaption('');
+
+                // Отправка в Supabase
+                await supabase.from('photos').insert([newP]);
             };
 
-            const deletePhoto = (id) => {
+            const deletePhoto = async (id) => {
                 if (confirm('Удалить это воспоминание навсегда?')) {
-                    saveState(photos.filter(p => p.id !== id));
+                    // Оптимистичное удаление
+                    setPhotos(prev => prev.filter(p => p.id !== id));
+                    // Удаление из Supabase
+                    await supabase.from('photos').delete().eq('id', id);
                 }
             };
 
@@ -154,28 +180,39 @@
                 setTempCaption(photo.caption);
             };
 
-            const saveCaption = (e) => {
+            const saveCaption = async (e) => {
                 e.preventDefault();
-                const updated = photos.map(p => p.id === editingCaptionId ? {...p, caption: tempCaption} : p);
-                saveState(updated);
+                const captionToSave = tempCaption;
+                const idToSave = editingCaptionId;
+
+                // Оптимистичное обновление
+                setPhotos(prev => prev.map(p => p.id === idToSave ? {...p, caption: captionToSave} : p));
                 setEditingCaptionId(null);
+
+                // Обновление в Supabase
+                await supabase.from('photos').update({ caption: captionToSave }).eq('id', idToSave);
             };
 
-            const addGuestMessage = (e) => {
+            const addGuestMessage = async (e) => {
                 e.preventDefault();
-                const newMessage = { id: Date.now(), name: guestName, text: guestText, date: new Date().toLocaleDateString() };
-                const updated = [newMessage, ...guestMessages];
-                setGuestMessages(updated);
-                localStorage.setItem('family_guestbook', JSON.stringify(updated));
+                const newId = Date.now();
+                const newMessage = { id: newId, name: guestName, text: guestText, date: new Date().toLocaleDateString() };
+                
+                // Оптимистичное добавление
+                setGuestMessages(prev => [newMessage, ...prev]);
                 setGuestName('');
                 setGuestText('');
+
+                // Отправка в Supabase
+                await supabase.from('guestbook').insert([newMessage]);
             };
 
-            const deleteGuestMessage = (id) => {
+            const deleteGuestMessage = async (id) => {
                 if (confirm('Удалить эту историю?')) {
-                    const updated = guestMessages.filter(msg => msg.id !== id);
-                    setGuestMessages(updated);
-                    localStorage.setItem('family_guestbook', JSON.stringify(updated));
+                    // Оптимистичное удаление
+                    setGuestMessages(prev => prev.filter(msg => msg.id !== id));
+                    // Удаление из Supabase
+                    await supabase.from('guestbook').delete().eq('id', id);
                 }
             };
 
@@ -196,25 +233,27 @@
             };
 
             const nextTrack = () => {
+                if (playlist.length === 0) return;
                 const nextIdx = (currentTrackIndex + 1) % playlist.length;
                 setCurrentTrackIndex(nextIdx);
                 setIsPlaying(true);
             };
 
             const prevTrack = () => {
+                if (playlist.length === 0) return;
                 const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
                 setCurrentTrackIndex(prevIdx);
                 setIsPlaying(true);
             };
 
             useEffect(() => {
-                if (audioRef.current && isPlaying) {
+                if (audioRef.current && isPlaying && playlist.length > 0) {
                     audioRef.current.play().catch(e => {
                         console.log("Автозапуск заблокирован", e);
                         setIsPlaying(false);
                     });
                 }
-            }, [currentTrackIndex]);
+            }, [currentTrackIndex, playlist]);
 
             const formatTime = (time) => {
                 if (isNaN(time)) return '00:00';
@@ -231,30 +270,34 @@
                 if (audioRef.current) setDurationStr(formatTime(audioRef.current.duration));
             };
 
-            const handleAddMusic = (e) => {
+            const handleAddMusic = async (e) => {
                 e.preventDefault();
                 if (!newMusicSrc || !newMusicName) return;
                 try {
                     const newTrack = { id: Date.now(), name: newMusicName, src: newMusicSrc };
-                    const updated = [...playlist, newTrack];
-                    setPlaylist(updated);
-                    localStorage.setItem('family_playlist', JSON.stringify(updated));
+                    
+                    // Оптимистичное добавление
+                    setPlaylist(prev => [...prev, newTrack]);
                     setIsMusicModalOpen(false);
                     setNewMusicSrc(null);
                     setNewMusicName('');
+
+                    // Сохранение в Supabase
+                    const { error } = await supabase.from('playlist').insert([newTrack]);
+                    if (error) throw error;
                 } catch (error) {
+                    console.error(error);
                     alert('Ошибка сохранения. Возможно, аудиофайл слишком большой!');
                 }
             };
 
-            const deleteTrack = (id, e) => {
+            const deleteTrack = async (id, e) => {
                 e.stopPropagation(); // Чтобы при клике на удаление не начинал играть трек
                 if (confirm('Удалить этот трек?')) {
                     const deletedIndex = playlist.findIndex(t => t.id === id);
                     const updated = playlist.filter(t => t.id !== id);
                     
                     setPlaylist(updated);
-                    localStorage.setItem('family_playlist', JSON.stringify(updated));
                     
                     // Если удалили все треки или тот, который сейчас играет
                     if (updated.length === 0 || deletedIndex === currentTrackIndex) {
@@ -262,8 +305,11 @@
                         setCurrentTrackIndex(0);
                     } else if (deletedIndex < currentTrackIndex) {
                         // Смещаем индекс, если удалили трек выше по списку
-                        setCurrentTrackIndex(currentTrackIndex - 1);
+                        setCurrentTrackIndex(prev => prev - 1);
                     }
+
+                    // Удаление из Supabase
+                    await supabase.from('playlist').delete().eq('id', id);
                 }
             };
 
