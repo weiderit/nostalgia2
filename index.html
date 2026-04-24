@@ -113,13 +113,13 @@
 
             useEffect(() => {
                 const loadData = async () => {
-                    // Загрузка фотографий из Supabase
-                    const { data: dbPhotos, error: photosError } = await supabase.from('photos').select('*').order('id', { ascending: true });
+                    // Загрузка фотографий из Supabase (изменена сортировка на descending для новых фото сверху)
+                    const { data: dbPhotos, error: photosError } = await supabase.from('photos').select('*').order('id', { ascending: false });
                     if (dbPhotos && dbPhotos.length > 0) {
                         setPhotos(dbPhotos);
                     } else if (!photosError) {
                         // Если таблица пуста, загружаем начальные фото для всех
-                        setPhotos(INITIAL_PHOTOS);
+                        setPhotos([...INITIAL_PHOTOS].reverse());
                         await supabase.from('photos').upsert(INITIAL_PHOTOS);
                     }
 
@@ -156,8 +156,8 @@
                 const newPhotoId = Date.now();
                 const newP = { id: newPhotoId, src: newPhotoPreview, caption: newCaption || 'Без названия' };
                 
-                // Оптимистичное обновление UI
-                setPhotos(prev => [...prev, newP]);
+                // Оптимистичное обновление UI: добавляем новое фото в начало массива
+                setPhotos(prev => [newP, ...prev]);
                 setIsModalOpen(false);
                 setNewPhotoPreview(null);
                 setNewCaption('');
