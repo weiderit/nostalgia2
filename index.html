@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Моя Любимая Семья - Ностальгия 2.0</title>
+    <link rel="icon" type="image/png" href="images/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .marquee-text {
+            display: inline-block;
+            white-space: nowrap;
+            animation: marquee 15s linear infinite;
+        }
+        .shadow-win98 { box-shadow: 4px 4px 0 rgba(0,0,0,0.5); }
+        .win98-border { border-top: 2px solid white; border-left: 2px solid white; border-right: 2px solid black; border-bottom: 2px solid black; }
+        .win98-border-inset { border-top: 2px solid black; border-left: 2px solid black; border-right: 2px solid white; border-bottom: 2px solid white; }
+        body { 
+            font-family: 'Comic Sans MS', 'Chalkboard SE', cursive; 
+            background-color: #008080; /* Тот самый зеленый фон Windows 95/98 */
+        }
+        .btn-win98 { 
+            background: #c0c0c0; 
+            border-top: 2px solid white; 
+            border-left: 2px solid white; 
+            border-right: 2px solid black; 
+            border-bottom: 2px solid black; 
+            padding: 2px 12px;
+            color: black;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .btn-win98:active { 
+            border-top: 2px solid black; 
+            border-left: 2px solid black; 
+            border-right: 2px solid white; 
+            border-bottom: 2px solid white; 
+        }
+        .active-tab {
+            background: #eeeeee !important;
+            border-top: 2px solid black !important;
+            border-left: 2px solid black !important;
+            border-right: 2px solid white !important;
+            border-bottom: 2px solid white !important;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const INITIAL_PHOTOS = [
+            { id: 1, src: "image_9663f1.jpg", caption: "Алим 1999 года рождения" },
+            { id: 2, src: "image_966375.jpg", caption: "Снизу Ибраим 2008 года, сверху Билял 2004 года" },
+            { id: 3, src: "image_96602f.jpg", caption: "Слева Ленние 2003 года рождения, справа Амина 2001 года рождения" },
+            { id: 4, src: "image_965f9a.jpg", caption: "Дочка Амины — Эдие" },
+            { id: 5, src: "image_965c8d.jpg", caption: "Амина в детстве" },
+            { id: 6, src: "image_965c11.jpg", caption: "Общая семейная фотография" },
+            { id: 7, src: "image_965872.jpg", caption: "Слева Билял, посередине Надика, справа Джемиль" },
+            { id: 8, src: "image_9657f5.jpg", caption: "Слева Усние Къартанай, посередине Сусанна, справа Алашка" },
+            { id: 9, src: "image_9654b1.jpg", caption: "Еще одна семейная фотография" },
+            { id: 10, src: "image_965436.jpg", caption: "Слева Абильтар Къартбабай, посередине Усние Къартанай, справа Сусанна" },
+        ];
+
+        const INITIAL_PLAYLIST = [
+            { id: 1, name: "Project_912.mp3", src: "Project_912.mp3" }
+        ];
+
+        function App() {
+            const [activeTab, setActiveTab] = useState('home');
+            const [photos, setPhotos] = useState(INITIAL_PHOTOS);
+            const [guestMessages, setGuestMessages] = useState([]);
+            const [isModalOpen, setIsModalOpen] = useState(false);
+            const [viewingPhoto, setViewingPhoto] = useState(null);
+            const [editingCaptionId, setEditingCaptionId] = useState(null);
+            const [tempCaption, setTempCaption] = useState('');
+            const [visits, setVisits] = useState(0);
+            
+            // Состояния для форм
+            const [newPhotoPreview, setNewPhotoPreview] = useState(null);
+            const [newCaption, setNewCaption] = useState('');
+            const [guestName, setGuestName] = useState('');
+            const [guestText, setGuestText] = useState('');
+
+            // Состояния для музыки
+            const [playlist, setPlaylist] = useState(INITIAL_PLAYLIST);
+            const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [isMusicModalOpen, setIsMusicModalOpen] = useState(false);
+            const [newMusicSrc, setNewMusicSrc] = useState(null);
+            const [newMusicName, setNewMusicName] = useState('');
+            const [currentTimeStr, setCurrentTimeStr] = useState('00:00');
+            const [durationStr, setDurationStr] = useState('00:00');
+            const audioRef = useRef(null);
+
+            useEffect(() => {
+                const savedPhotos = localStorage.getItem('family_photos_v3');
+                const savedGuest = localStorage.getItem('family_guestbook');
+                const savedPlaylist = localStorage.getItem('family_playlist');
+                const savedVisits = localStorage.getItem('family_visits');
+                
+                if (savedPhotos) setPhotos(JSON.parse(savedPhotos));
+                if (savedGuest) setGuestMessages(JSON.parse(savedGuest));
+                if (savedPlaylist) setPlaylist(JSON.parse(savedPlaylist));
+
+                // Логика счетчика посещений
+                const currentVisits = savedVisits ? parseInt(savedVisits, 10) : 0;
+                const newVisits = currentVisits + 1;
+                setVisits(newVisits);
+                localStorage.setItem('family_visits', newVisits.toString());
+            }, []);
+
+            const saveState = (newPhotos) => {
+                setPhotos(newPhotos);
+                localStorage.setItem('family_photos_v3', JSON.stringify(newPhotos));
+            };
+
+            const handleAddPhoto = (e) => {
+                e.preventDefault();
+                const newP = { id: Date.now(), src: newPhotoPreview, caption: newCaption || 'Без названия' };
+                const updated = [...photos, newP];
+                saveState(updated);
+                setIsModalOpen(false);
+                setNewPhotoPreview(null);
+                setNewCaption('');
+            };
+
+            const deletePhoto = (id) => {
+                if (confirm('Удалить это воспоминание навсегда?')) {
+                    saveState(photos.filter(p => p.id !== id));
+                }
+            };
+
+            const startEditCaption = (photo) => {
+                setEditingCaptionId(photo.id);
+                setTempCaption(photo.caption);
+            };
+
+            const saveCaption = (e) => {
+                e.preventDefault();
+                const updated = photos.map(p => p.id === editingCaptionId ? {...p, caption: tempCaption} : p);
+                saveState(updated);
+                setEditingCaptionId(null);
+            };
+
+            const addGuestMessage = (e) => {
+                e.preventDefault();
+                const newMessage = { id: Date.now(), name: guestName, text: guestText, date: new Date().toLocaleDateString() };
+                const updated = [newMessage, ...guestMessages];
+                setGuestMessages(updated);
+                localStorage.setItem('family_guestbook', JSON.stringify(updated));
+                setGuestName('');
+                setGuestText('');
+            };
+
+            const deleteGuestMessage = (id) => {
+                if (confirm('Удалить эту историю?')) {
+                    const updated = guestMessages.filter(msg => msg.id !== id);
+                    setGuestMessages(updated);
+                    localStorage.setItem('family_guestbook', JSON.stringify(updated));
+                }
+            };
+
+            // Функции Музыкального плеера
+            const togglePlay = () => {
+                if (isPlaying) {
+                    audioRef.current.pause();
+                    setIsPlaying(false);
+                } else {
+                    audioRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error(e));
+                }
+            };
+
+            const stopTrack = () => {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+                setIsPlaying(false);
+            };
+
+            const nextTrack = () => {
+                const nextIdx = (currentTrackIndex + 1) % playlist.length;
+                setCurrentTrackIndex(nextIdx);
+                setIsPlaying(true);
+            };
+
+            const prevTrack = () => {
+                const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+                setCurrentTrackIndex(prevIdx);
+                setIsPlaying(true);
+            };
+
+            useEffect(() => {
+                if (audioRef.current && isPlaying) {
+                    audioRef.current.play().catch(e => {
+                        console.log("Автозапуск заблокирован", e);
+                        setIsPlaying(false);
+                    });
+                }
+            }, [currentTrackIndex]);
+
+            const formatTime = (time) => {
+                if (isNaN(time)) return '00:00';
+                const mins = Math.floor(time / 60);
+                const secs = Math.floor(time % 60);
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            };
+
+            const handleTimeUpdate = () => {
+                if (audioRef.current) setCurrentTimeStr(formatTime(audioRef.current.currentTime));
+            };
+
+            const handleLoadedMetadata = () => {
+                if (audioRef.current) setDurationStr(formatTime(audioRef.current.duration));
+            };
+
+            const handleAddMusic = (e) => {
+                e.preventDefault();
+                if (!newMusicSrc || !newMusicName) return;
+                try {
+                    const newTrack = { id: Date.now(), name: newMusicName, src: newMusicSrc };
+                    const updated = [...playlist, newTrack];
+                    setPlaylist(updated);
+                    localStorage.setItem('family_playlist', JSON.stringify(updated));
+                    setIsMusicModalOpen(false);
+                    setNewMusicSrc(null);
+                    setNewMusicName('');
+                } catch (error) {
+                    alert('Ошибка сохранения. Возможно, аудиофайл слишком большой!');
+                }
+            };
+
+            const deleteTrack = (id, e) => {
+                e.stopPropagation(); // Чтобы при клике на удаление не начинал играть трек
+                if (confirm('Удалить этот трек?')) {
+                    const deletedIndex = playlist.findIndex(t => t.id === id);
+                    const updated = playlist.filter(t => t.id !== id);
+                    
+                    setPlaylist(updated);
+                    localStorage.setItem('family_playlist', JSON.stringify(updated));
+                    
+                    // Если удалили все треки или тот, который сейчас играет
+                    if (updated.length === 0 || deletedIndex === currentTrackIndex) {
+                        stopTrack();
+                        setCurrentTrackIndex(0);
+                    } else if (deletedIndex < currentTrackIndex) {
+                        // Смещаем индекс, если удалили трек выше по списку
+                        setCurrentTrackIndex(currentTrackIndex - 1);
+                    }
+                }
+            };
+
+            return (
+                <div className="min-h-screen p-4 flex flex-col items-center">
+                    
+                    {/* Скрытый аудио-тег, чтобы музыка играла при переключении вкладок */}
+                    <audio 
+                        ref={audioRef} 
+                        src={playlist[currentTrackIndex]?.src} 
+                        onEnded={nextTrack} 
+                        onTimeUpdate={handleTimeUpdate}
+                        onLoadedMetadata={handleLoadedMetadata}
+                    />
+
+                    {/* Тот самый Desktop из 90-х */}
+                    <div className="w-full max-w-6xl bg-[#c0c0c0] win98-border shadow-win98 flex flex-col">
+                        
+                        {/* Заголовок окна */}
+                        <div className="bg-gradient-to-r from-[#000080] to-[#1084d0] p-1 flex justify-between items-center text-white px-2">
+                            <span className="font-bold text-sm flex items-center gap-2">
+                                🏠 C:\WINDOWS\Desktop\Family_Archive.exe
+                            </span>
+                            <div className="flex gap-1">
+                                <button className="btn-win98 py-0 px-2 text-xs">_</button>
+                                <button className="btn-win98 py-0 px-2 text-xs">□</button>
+                                <button className="btn-win98 py-0 px-2 text-xs bg-red-400">X</button>
+                            </div>
+                        </div>
+
+                        {/* Меню Навигации */}
+                        <div className="p-2 border-b border-gray-400 flex flex-wrap gap-2 bg-[#c0c0c0]">
+                            <button onClick={() => setActiveTab('home')} className={`btn-win98 ${activeTab === 'home' ? 'active-tab' : ''}`}>ГЛАВНАЯ</button>
+                            <button onClick={() => setActiveTab('album')} className={`btn-win98 ${activeTab === 'album' ? 'active-tab' : ''}`}>ФОТОАЛЬБОМ</button>
+                            <button onClick={() => setActiveTab('music')} className={`btn-win98 ${activeTab === 'music' ? 'active-tab' : ''}`}>МУЗ. ПЛЕЕР</button>
+                            <button onClick={() => setActiveTab('guest')} className={`btn-win98 ${activeTab === 'guest' ? 'active-tab' : ''}`}>ВОСПОМИНАНИЯ</button>
+                        </div>
+
+                        {/* Основной контент */}
+                        <div className="bg-white m-2 p-6 win98-border-inset min-h-[500px] overflow-y-auto text-black">
+                            
+                            {/* ТАБ: ГЛАВНАЯ */}
+                            {activeTab === 'home' && (
+                                <div className="text-center space-y-6">
+                                    <h2 className="text-4xl text-blue-800 font-bold italic underline">Добро пожаловать в наше прошлое!</h2>
+                                    <div className="flex justify-center">
+                                        <img src="https://web.archive.org/web/20091027053531im_/http://geocities.com/Heartland/Acres/1814/welcome1.gif" alt="Welcome" />
+                                    </div>
+                                    <p className="text-xl max-w-2xl mx-auto">
+                                        Этот сайт создан для того, чтобы хранить самые теплые моменты нашей семьи. 
+                                        Здесь вы найдете фотографии Алима, Ибраима, Биляла, Амины и всех наших близких.
+                                    </p>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 border-2 border-dashed border-gray-300">
+                                        <div className="p-2 bg-yellow-100 border">Нас посетили: <b>{visits}</b> раз</div>
+                                        <div className="p-2 bg-blue-100 border">Фотографий: <b>{photos.length}</b></div>
+                                        <div className="p-2 bg-green-100 border">Статус: <b>Online</b></div>
+                                        <div className="p-2 bg-purple-100 border">Год: <b>2000-е</b></div>
+                                    </div>
+                                    <marquee className="text-red-600 font-bold text-lg">!!! СМОТРИТЕ НОВЫЕ ФОТОГРАФИИ В РАЗДЕЛЕ АЛЬБОМ !!!</marquee>
+                                </div>
+                            )}
+
+                            {/* ТАБ: АЛЬБОМ */}
+                            {activeTab === 'album' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {photos.map(photo => (
+                                        <div key={photo.id} className="bg-[#c0c0c0] p-2 win98-border shadow-md group">
+                                            <div className="relative bg-black aspect-video flex items-center justify-center overflow-hidden border-2 border-black cursor-pointer" onClick={() => setViewingPhoto(photo)}>
+                                                <img src={photo.src} className="max-w-full max-h-full object-contain" />
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); deletePhoto(photo.id); }}
+                                                    className="absolute top-1 right-1 bg-red-600 text-white text-[10px] px-1 border-t border-l border-white border-r border-b border-black opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    УДАЛИТЬ
+                                                </button>
+                                            </div>
+                                            <div className="mt-2 bg-white win98-border-inset p-2 text-center min-h-[50px]">
+                                                {editingCaptionId === photo.id ? (
+                                                    <form onSubmit={saveCaption} className="flex flex-col gap-1">
+                                                        <input 
+                                                            autoFocus
+                                                            className="text-xs border p-1" 
+                                                            value={tempCaption} 
+                                                            onChange={e => setTempCaption(e.target.value)} 
+                                                        />
+                                                        <div className="flex gap-1 justify-center">
+                                                            <button type="submit" className="text-[10px] bg-green-200 border px-1 font-bold">ОК</button>
+                                                            <button onClick={() => setEditingCaptionId(null)} className="text-[10px] bg-red-200 border px-1 font-bold">ОТМЕНА</button>
+                                                        </div>
+                                                    </form>
+                                                ) : (
+                                                    <p 
+                                                        className="text-blue-900 font-bold italic cursor-pointer hover:underline"
+                                                        onClick={() => startEditCaption(photo)}
+                                                        title="Нажмите, чтобы изменить надпись"
+                                                    >
+                                                        {photo.caption}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* ТАБ: МУЗЫКА */}
+                            {activeTab === 'music' && (
+                                <div className="flex flex-col items-center py-10 space-y-8">
+                                    <div className="bg-[#c0c0c0] p-4 win98-border w-full max-w-sm">
+                                        <div className="bg-black p-4 text-green-500 font-mono mb-4 text-center border-2 border-inset border-gray-600">
+                                            <div className="text-xs">WINAMP 2.81</div>
+                                            <div className={`text-lg mt-1 mb-1 truncate ${isPlaying ? 'animate-pulse' : ''}`}>
+                                                {isPlaying ? 'PLAYING: ' : 'STOPPED: '}
+                                                {playlist[currentTrackIndex]?.name || 'Нет трека'}
+                                            </div>
+                                            <div className="text-xs mt-2">{currentTimeStr} / {durationStr}</div>
+                                        </div>
+                                        <div className="grid grid-cols-5 gap-1">
+                                            <button onClick={prevTrack} className="btn-win98 text-[10px] p-1">PREV</button>
+                                            <button onClick={() => { if(!isPlaying) togglePlay(); }} className="btn-win98 text-[10px] p-1">PLAY</button>
+                                            <button onClick={() => { if(isPlaying) togglePlay(); }} className="btn-win98 text-[10px] p-1">PAUSE</button>
+                                            <button onClick={stopTrack} className="btn-win98 text-[10px] p-1">STOP</button>
+                                            <button onClick={nextTrack} className="btn-win98 text-[10px] p-1">NEXT</button>
+                                        </div>
+                                        <div className="mt-4 text-xs font-bold text-gray-700 uppercase">
+                                            Playlist:
+                                            <ol className="mt-2 space-y-1 max-h-[150px] overflow-y-auto win98-border-inset bg-white p-1">
+                                                {playlist.map((track, index) => (
+                                                    <li 
+                                                        key={track.id} 
+                                                        className={`cursor-pointer p-1 flex justify-between items-center ${index === currentTrackIndex ? 'bg-blue-800 text-white' : 'hover:bg-gray-200 text-black'}`}
+                                                        onClick={() => { setCurrentTrackIndex(index); setIsPlaying(true); }}
+                                                    >
+                                                        <span className="truncate flex-grow">{index + 1}. {track.name}</span>
+                                                        <button 
+                                                            onClick={(e) => deleteTrack(track.id, e)}
+                                                            className="ml-2 bg-red-500 hover:bg-red-600 text-white text-[10px] px-1.5 font-bold win98-border border-b-black border-r-black border-t-white border-l-white"
+                                                            title="Удалить трек"
+                                                        >
+                                                            X
+                                                        </button>
+                                                    </li>
+                                                ))}
+                                            </ol>
+                                        </div>
+                                    </div>
+                                    <img src="https://web.archive.org/web/20091027003023im_/http://geocities.com/SouthBeach/Sands/1269/music.gif" alt="Music" />
+                                </div>
+                            )}
+
+                            {/* ТАБ: ГОСТЕВАЯ КНИГА / ВОСПОМИНАНИЯ */}
+                            {activeTab === 'guest' && (
+                                <div className="max-w-2xl mx-auto">
+                                    <div className="bg-yellow-50 p-4 border-2 border-dashed border-yellow-400 mb-8">
+                                        <h3 className="font-bold text-lg text-yellow-800 mb-2">Наши истории и воспоминания</h3>
+                                        <form onSubmit={addGuestMessage} className="space-y-3">
+                                            <input 
+                                                className="w-full p-2 border border-gray-400 text-sm" 
+                                                placeholder="Ваше имя" 
+                                                value={guestName}
+                                                onChange={e => setGuestName(e.target.value)}
+                                                required
+                                            />
+                                            <textarea 
+                                                className="w-full p-2 border border-gray-400 text-sm h-24" 
+                                                placeholder="Ваша история из жизни..." 
+                                                value={guestText}
+                                                onChange={e => setGuestText(e.target.value)}
+                                                required
+                                            />
+                                            <button type="submit" className="btn-win98">ДОБАВИТЬ ВОСПОМИНАНИЕ</button>
+                                        </form>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {guestMessages.map(msg => (
+                                            <div key={msg.id} className="p-3 border-b border-gray-200 group relative">
+                                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-blue-700">{msg.name}</span>
+                                                        <span>{msg.date}</span>
+                                                    </div>
+                                                    <button 
+                                                        onClick={() => deleteGuestMessage(msg.id)}
+                                                        className="bg-[#c0c0c0] text-black text-[10px] px-1 win98-border opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white"
+                                                    >
+                                                        УДАЛИТЬ
+                                                    </button>
+                                                </div>
+                                                <p className="italic text-gray-800">"{msg.text}"</p>
+                                            </div>
+                                        ))}
+                                        {guestMessages.length === 0 && <p className="text-center text-gray-400 italic">Здесь пока пусто. Поделитесь вашей первой историей!</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Статус бар внизу */}
+                        <div className="bg-[#c0c0c0] p-1 flex gap-2 border-t border-gray-400 text-xs text-black">
+                            <div className="win98-border-inset px-2 flex-grow">Готово</div>
+                            <div className="win98-border-inset px-4">My Computer</div>
+                            <div className="win98-border-inset px-2">100%</div>
+                        </div>
+                    </div>
+
+                    {/* Плавающая кнопка зависит от вкладки */}
+                    {activeTab === 'music' ? (
+                        <button onClick={() => setIsMusicModalOpen(true)} className="fixed bottom-6 right-6 btn-win98 shadow-win98 py-4 px-6 scale-110 flex items-center gap-2">
+                            <span>🎵</span> ДОБАВИТЬ ТРЕК
+                        </button>
+                    ) : (
+                        <button onClick={() => setIsModalOpen(true)} className="fixed bottom-6 right-6 btn-win98 shadow-win98 py-4 px-6 scale-110 flex items-center gap-2">
+                            <span>➕</span> НОВОЕ ФОТО
+                        </button>
+                    )}
+
+                    {/* Модалка: Фото */}
+                    {isModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
+                            <div className="bg-[#c0c0c0] win98-border p-1 w-full max-w-sm">
+                                <div className="bg-[#000080] p-1 flex justify-between text-white px-2">
+                                    <span className="font-bold text-xs uppercase">UPLOAD.EXE</span>
+                                    <button onClick={() => setIsModalOpen(false)} className="bg-[#c0c0c0] text-black px-1 text-xs border">X</button>
+                                </div>
+                                <form onSubmit={handleAddPhoto} className="p-4 space-y-4 text-black">
+                                    <div 
+                                        className="bg-white border-2 border-black border-inset p-2 min-h-[100px] flex items-center justify-center cursor-pointer" 
+                                        onClick={() => document.getElementById('fileIn').click()}
+                                    >
+                                        <input type="file" id="fileIn" className="hidden" onChange={e => {
+                                            const reader = new FileReader();
+                                            reader.onload = () => setNewPhotoPreview(reader.result);
+                                            reader.readAsDataURL(e.target.files[0]);
+                                        }} />
+                                        {newPhotoPreview ? <img src={newPhotoPreview} className="h-24" /> : <b>ВЫБРАТЬ ФОТО</b>}
+                                    </div>
+                                    <input value={newCaption} onChange={e => setNewCaption(e.target.value)} className="w-full p-2 border-2" placeholder="Кто на фото?" required />
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setIsModalOpen(false)} className="btn-win98">ОТМЕНА</button>
+                                        <button type="submit" className="btn-win98">OK</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Модалка: Музыка */}
+                    {isMusicModalOpen && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
+                            <div className="bg-[#c0c0c0] win98-border p-1 w-full max-w-sm">
+                                <div className="bg-[#000080] p-1 flex justify-between text-white px-2">
+                                    <span className="font-bold text-xs uppercase">ADD_MUSIC.EXE</span>
+                                    <button onClick={() => setIsMusicModalOpen(false)} className="bg-[#c0c0c0] text-black px-1 text-xs border">X</button>
+                                </div>
+                                <form onSubmit={handleAddMusic} className="p-4 space-y-4 text-black">
+                                    <div 
+                                        className="bg-white border-2 border-black border-inset p-2 min-h-[100px] flex flex-col items-center justify-center cursor-pointer text-center" 
+                                        onClick={() => document.getElementById('musicFileIn').click()}
+                                    >
+                                        <input type="file" accept="audio/*" id="musicFileIn" className="hidden" onChange={e => {
+                                            const file = e.target.files[0];
+                                            if(file) {
+                                                const reader = new FileReader();
+                                                reader.onload = () => setNewMusicSrc(reader.result);
+                                                reader.readAsDataURL(file);
+                                                if(!newMusicName) setNewMusicName(file.name);
+                                            }
+                                        }} />
+                                        {newMusicSrc ? <b className="text-green-700">АУДИОФАЙЛ УСПЕШНО ВЫБРАН</b> : <b>ВЫБРАТЬ АУДИОФАЙЛ (.mp3)</b>}
+                                    </div>
+                                    <input value={newMusicName} onChange={e => setNewMusicName(e.target.value)} className="w-full p-2 border-2" placeholder="Название трека" required />
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setIsMusicModalOpen(false)} className="btn-win98">ОТМЕНА</button>
+                                        <button type="submit" className="btn-win98">OK</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Вьювер фотографий */}
+                    {viewingPhoto && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-[200]" onClick={() => setViewingPhoto(null)}>
+                            <div className="bg-[#c0c0c0] win98-border p-1 max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+                                <div className="bg-[#000080] p-1 flex justify-between text-white px-2">
+                                    <span className="font-bold text-xs uppercase">IMAGE_VIEWER.EXE</span>
+                                    <button onClick={() => setViewingPhoto(null)} className="bg-[#c0c0c0] text-black px-1 text-xs border">X</button>
+                                </div>
+                                <div className="p-4 flex flex-col items-center bg-gray-600">
+                                    <img src={viewingPhoto.src} className="max-h-[70vh] shadow-2xl border-4 border-white" />
+                                    <div className="bg-[#c0c0c0] p-4 mt-4 win98-border w-full text-center">
+                                        <p className="text-blue-900 font-bold text-xl italic">{viewingPhoto.caption}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
