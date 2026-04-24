@@ -313,6 +313,13 @@
                 }
             };
 
+            // Сбор последних активностей для главной страницы
+            const recentActivities = [
+                ...photos.map(p => ({ label: 'Новая фотография', text: p.caption, id: p.id })),
+                ...guestMessages.map(m => ({ label: `Воспоминание от ${m.name}`, text: m.text, id: m.id })),
+                ...playlist.map(t => ({ label: 'Новый трек', text: t.name, id: t.id }))
+            ].sort((a, b) => b.id - a.id).slice(0, 5);
+
             return (
                 <div className="min-h-screen p-2 sm:p-4 flex flex-col items-center">
                     
@@ -362,6 +369,26 @@
                                         Этот сайт создан для того, чтобы хранить самые теплые моменты нашей семьи. 
                                         Здесь вы найдете фотографии Алима, Ибраима, Биляла, Амины и всех наших близких.
                                     </p>
+
+                                    {/* БЛОК ОБНОВЛЕНИЙ */}
+                                    <div className="max-w-2xl mx-auto bg-[#c0c0c0] win98-border-inset p-3 text-left">
+                                        <div className="bg-[#000080] text-white px-2 py-1 font-bold text-xs mb-2">ЧТО НОВОГО?</div>
+                                        <div className="bg-white border-2 border-inset border-gray-500 p-2 text-sm max-h-[150px] overflow-y-auto">
+                                            {recentActivities.length > 0 ? (
+                                                <ul className="space-y-2">
+                                                    {recentActivities.map((act, idx) => (
+                                                        <li key={idx} className="flex gap-2 border-b border-dashed border-gray-300 pb-1 last:border-0">
+                                                            <span className="text-red-600 font-bold">*</span>
+                                                            <span><b className="text-blue-800">{act.label}:</b> <i className="text-gray-700">{act.text}</i></span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-gray-500 italic">Ждем новых обновлений...</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 p-2 sm:p-4 border-2 border-dashed border-gray-300 text-xs sm:text-base">
                                         <div className="p-2 bg-yellow-100 border">Нас посетили: <br className="sm:hidden" /><b>{visits}</b> раз</div>
                                         <div className="p-2 bg-blue-100 border">Фотографий: <br className="sm:hidden" /><b>{photos.length}</b></div>
