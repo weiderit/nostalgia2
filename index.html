@@ -85,27 +85,31 @@
         ];
 
         function App() {
+            // === НОВЫЕ СОСТОЯНИЯ ДЛЯ ПАРОЛЯ ===
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passwordInput, setPasswordInput] = useState('');
+            const [loginError, setLoginError] = useState(false);
+            const [isCheckingPassword, setIsCheckingPassword] = useState(false);
+            // ===================================
+
             const [activeTab, setActiveTab] = useState('home');
             const [photos, setPhotos] = useState([]);
             const [guestMessages, setGuestMessages] = useState([]);
-            const [comments, setComments] = useState([]); // Состояние для комментариев к фото
+            const [comments, setComments] = useState([]); 
             const [isModalOpen, setIsModalOpen] = useState(false);
             const [viewingPhoto, setViewingPhoto] = useState(null);
             const [editingCaptionId, setEditingCaptionId] = useState(null);
             const [tempCaption, setTempCaption] = useState('');
             const [visits, setVisits] = useState(0);
             
-            // Состояния для форм
             const [newPhotoPreview, setNewPhotoPreview] = useState(null);
             const [newCaption, setNewCaption] = useState('');
             const [guestName, setGuestName] = useState('');
             const [guestText, setGuestText] = useState('');
             
-            // Состояния для комментариев под фото
             const [commentName, setCommentName] = useState('');
             const [commentText, setCommentText] = useState('');
 
-            // Состояния для музыки
             const [playlist, setPlaylist] = useState([]);
             const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
             const [isPlaying, setIsPlaying] = useState(false);
@@ -118,7 +122,6 @@
 
             useEffect(() => {
                 const loadData = async () => {
-                    // Загрузка фотографий
                     const { data: dbPhotos, error: photosError } = await supabase.from('photos').select('*').order('id', { ascending: false });
                     if (dbPhotos && dbPhotos.length > 0) {
                         setPhotos(dbPhotos);
@@ -127,11 +130,9 @@
                         await supabase.from('photos').upsert(INITIAL_PHOTOS);
                     }
 
-                    // Загрузка гостевой книги
                     const { data: dbGuestbook } = await supabase.from('guestbook').select('*').order('id', { ascending: false });
                     if (dbGuestbook) setGuestMessages(dbGuestbook);
 
-                    // Загрузка плейлиста
                     const { data: dbPlaylist, error: playlistError } = await supabase.from('playlist').select('*').order('id', { ascending: true });
                     if (dbPlaylist && dbPlaylist.length > 0) {
                         setPlaylist(dbPlaylist);
@@ -140,11 +141,9 @@
                         await supabase.from('playlist').upsert(INITIAL_PLAYLIST);
                     }
 
-                    // Загрузка комментариев к фото
                     const { data: dbComments } = await supabase.from('comments').select('*').order('id', { ascending: true });
                     if (dbComments) setComments(dbComments);
 
-                    // Логика счетчика посещений
                     const { data: dbVisits } = await supabase.from('visits').select('count').eq('id', 1).single();
                     const currentVisits = dbVisits ? dbVisits.count : 0;
                     const newVisits = currentVisits + 1;
@@ -172,7 +171,6 @@
             const deletePhoto = async (id) => {
                 if (confirm('Удалить это воспоминание навсегда?')) {
                     setPhotos(prev => prev.filter(p => p.id !== id));
-                    // Удаляем фото и связанные с ним комментарии
                     await supabase.from('comments').delete().eq('photo_id', id);
                     await supabase.from('photos').delete().eq('id', id);
                 }
@@ -213,7 +211,6 @@
                 }
             };
 
-            // Добавление комментария к фото
             const handleAddComment = async (e, photoId) => {
                 e.preventDefault();
                 const newComment = {
@@ -230,7 +227,6 @@
                 await supabase.from('comments').insert([newComment]);
             };
 
-            // Удаление комментария
             const deleteComment = async (id) => {
                 if (confirm('Удалить эту мысль?')) {
                     setComments(prev => prev.filter(c => c.id !== id));
@@ -238,7 +234,6 @@
                 }
             };
 
-            // Функции Музыкального плеера
             const togglePlay = () => {
                 if (isPlaying) {
                     audioRef.current.pause();
@@ -330,7 +325,78 @@
                 }
             };
 
-            // Сбор последних активностей (без комментариев к фото, по просьбе)
+            // === ОБРАБОТЧИК ВХОДА ПО ПАРОЛЮ ===
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                if (!passwordInput) return;
+
+                setIsCheckingPassword(true);
+                setLoginError(false);
+
+                try {
+                    // Запрашиваем пароль из базы данных (таблица settings, строка с id = 1)
+                    const { data, error } = await supabase
+                        .from('settings')
+                        .select('password')
+                        .eq('id', 1)
+                        .single();
+
+                    if (error) throw error;
+
+                    if (data && passwordInput === data.password) {
+                        setIsAuthenticated(true);
+                        setLoginError(false);
+                    } else {
+                        setLoginError(true);
+                        setPasswordInput('');
+                    }
+                } catch (err) {
+                    console.error("Ошибка при проверке пароля:", err);
+                    alert("Не удалось проверить пароль. Убедитесь, что в базе Supabase создана таблица 'settings' с колонкой 'password' и строкой где id=1.");
+                    setLoginError(true);
+                } finally {
+                    setIsCheckingPassword(false);
+                }
+            };
+
+            // ЕСЛИ НЕ АВТОРИЗОВАН, ПОКАЗЫВАЕМ ОКНО ВХОДА (СТИЛЬ WIN98)
+            if (!isAuthenticated) {
+                return (
+                    <div className="min-h-screen p-4 flex items-center justify-center">
+                        <div className="bg-[#c0c0c0] win98-border shadow-win98 max-w-sm w-full">
+                            <div className="bg-[#000080] p-1 flex justify-between items-center text-white px-2">
+                                <span className="font-bold text-sm">LOGON.EXE - Защита доступа</span>
+                                <button className="btn-win98 py-0 px-2 text-xs">X</button>
+                            </div>
+                            <form onSubmit={handleLogin} className="p-6 flex flex-col gap-4 text-black">
+                                <div className="flex items-start gap-4">
+                                    <span className="text-4xl">🔐</span>
+                                    <div>
+                                        <p className="text-sm font-bold mb-2">Требуется авторизация</p>
+                                        <p className="text-xs mb-3">Сайт содержит личный семейный архив. Пожалуйста, введите пароль для доступа.</p>
+                                        <input
+                                            type="password"
+                                            value={passwordInput}
+                                            onChange={(e) => setPasswordInput(e.target.value)}
+                                            className="w-full border-2 border-inset border-gray-500 p-1 text-sm outline-none bg-white"
+                                            autoFocus
+                                            disabled={isCheckingPassword}
+                                        />
+                                        {loginError && <p className="text-red-600 text-xs mt-1 font-bold">Неверный пароль. Попробуйте еще раз.</p>}
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-400">
+                                    <button type="submit" className="btn-win98 w-24" disabled={isCheckingPassword}>
+                                        {isCheckingPassword ? 'ПОДОЖДИТЕ...' : 'ОК'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+            // ==============================================
+
             const recentActivities = [
                 ...photos.map(p => ({ label: 'Новая фотография', text: p.caption, id: p.id })),
                 ...guestMessages.map(m => ({ label: `Воспоминание от ${m.name}`, text: m.text, id: m.id })),
@@ -348,10 +414,8 @@
                         onLoadedMetadata={handleLoadedMetadata}
                     />
 
-                    {/* Тот самый Desktop из 90-х */}
                     <div className="w-full max-w-6xl bg-[#c0c0c0] win98-border shadow-win98 flex flex-col">
                         
-                        {/* Заголовок окна */}
                         <div className="bg-gradient-to-r from-[#000080] to-[#1084d0] p-1 flex justify-between items-center text-white px-2">
                             <span className="font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-2 truncate pr-2">
                                 🏠 C:\WINDOWS\Desktop\Family_Archive.exe
@@ -363,7 +427,6 @@
                             </div>
                         </div>
 
-                        {/* Меню Навигации */}
                         <div className="p-2 border-b border-gray-400 flex flex-wrap gap-2 bg-[#c0c0c0]">
                             <button onClick={() => setActiveTab('home')} className={`btn-win98 ${activeTab === 'home' ? 'active-tab' : ''}`}>ГЛАВНАЯ</button>
                             <button onClick={() => setActiveTab('album')} className={`btn-win98 ${activeTab === 'album' ? 'active-tab' : ''}`}>ФОТОАЛЬБОМ</button>
@@ -371,10 +434,8 @@
                             <button onClick={() => setActiveTab('guest')} className={`btn-win98 ${activeTab === 'guest' ? 'active-tab' : ''}`}>ВОСПОМИНАНИЯ</button>
                         </div>
 
-                        {/* Основной контент */}
                         <div className="bg-white m-1 sm:m-2 p-3 sm:p-6 win98-border-inset min-h-[400px] sm:min-h-[500px] overflow-y-auto overflow-x-hidden text-black">
                             
-                            {/* ТАБ: ГЛАВНАЯ */}
                             {activeTab === 'home' && (
                                 <div className="text-center space-y-4 sm:space-y-6">
                                     <h2 className="text-2xl sm:text-4xl text-blue-800 font-bold italic underline">Добро пожаловать в наше прошлое!</h2>
@@ -386,7 +447,6 @@
                                         Здесь вы найдете фотографии Алима, Ибраима, Биляла, Амины и всех наших близких.
                                     </p>
 
-                                    {/* БЛОК ОБНОВЛЕНИЙ */}
                                     <div className="max-w-2xl mx-auto bg-[#c0c0c0] win98-border-inset p-3 text-left">
                                         <div className="bg-[#000080] text-white px-2 py-1 font-bold text-xs mb-2">ЧТО НОВОГО?</div>
                                         <div className="bg-white border-2 border-inset border-gray-500 p-2 text-sm max-h-[150px] overflow-y-auto">
@@ -415,7 +475,6 @@
                                 </div>
                             )}
 
-                            {/* ТАБ: АЛЬБОМ */}
                             {activeTab === 'album' && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {photos.map(photo => {
@@ -466,7 +525,6 @@
                                 </div>
                             )}
 
-                            {/* ТАБ: МУЗЫКА */}
                             {activeTab === 'music' && (
                                 <div className="flex flex-col items-center py-10 space-y-8">
                                     <div className="bg-[#c0c0c0] p-4 win98-border w-full max-w-sm">
@@ -511,7 +569,6 @@
                                 </div>
                             )}
 
-                            {/* ТАБ: ГОСТЕВАЯ КНИГА / ВОСПОМИНАНИЯ */}
                             {activeTab === 'guest' && (
                                 <div className="max-w-2xl mx-auto">
                                     <div className="bg-yellow-50 p-4 border-2 border-dashed border-yellow-400 mb-8">
@@ -559,7 +616,6 @@
 
                         </div>
 
-                        {/* Статус бар внизу */}
                         <div className="bg-[#c0c0c0] p-1 flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 border-t border-gray-400 text-[10px] sm:text-xs text-black">
                             <div className="win98-border-inset px-2 flex-grow truncate">Готово</div>
                             <div className="win98-border-inset px-2 sm:px-4 truncate">My Computer</div>
@@ -567,7 +623,6 @@
                         </div>
                     </div>
 
-                    {/* Плавающая кнопка зависит от вкладки */}
                     {activeTab === 'music' ? (
                         <button onClick={() => setIsMusicModalOpen(true)} className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 btn-win98 shadow-win98 py-3 px-4 sm:py-4 sm:px-6 scale-90 sm:scale-110 flex items-center gap-1 sm:gap-2 z-50">
                             <span>🎵</span> ДОБАВИТЬ ТРЕК
@@ -578,7 +633,6 @@
                         </button>
                     )}
 
-                    {/* Модалка: Фото */}
                     {isModalOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
                             <div className="bg-[#c0c0c0] win98-border p-1 w-full max-w-sm">
@@ -608,7 +662,6 @@
                         </div>
                     )}
 
-                    {/* Модалка: Музыка */}
                     {isMusicModalOpen && (
                         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[100]">
                             <div className="bg-[#c0c0c0] win98-border p-1 w-full max-w-sm">
@@ -642,19 +695,15 @@
                         </div>
                     )}
 
-                    {/* Вьювер фотографий С КОММЕНТАРИЯМИ */}
                     {viewingPhoto && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center p-2 sm:p-4 z-[200]" onClick={() => setViewingPhoto(null)}>
                             <div className="bg-[#c0c0c0] win98-border p-1 max-w-5xl w-full max-h-[95vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                                {/* Шапка */}
                                 <div className="bg-[#000080] p-1 flex justify-between text-white px-2 flex-shrink-0">
                                     <span className="font-bold text-xs uppercase">IMAGE_VIEWER.EXE</span>
                                     <button onClick={() => setViewingPhoto(null)} className="bg-[#c0c0c0] text-black px-1 text-xs border">X</button>
                                 </div>
                                 
-                                {/* Контент окна */}
                                 <div className="p-2 sm:p-4 flex flex-col md:flex-row gap-4 bg-gray-600 overflow-y-auto flex-1">
-                                    {/* Блок самой фотографии */}
                                     <div className="flex-1 flex flex-col items-center justify-center min-w-0">
                                         <img src={viewingPhoto.src} className="max-h-[40vh] md:max-h-[60vh] max-w-full object-contain shadow-2xl border-2 sm:border-4 border-white" />
                                         <div className="bg-[#c0c0c0] p-2 mt-4 win98-border w-full text-center">
@@ -662,14 +711,12 @@
                                         </div>
                                     </div>
                                     
-                                    {/* Блок обсуждения (комментариев) */}
                                     <div className="w-full md:w-80 flex-shrink-0 flex flex-col bg-[#c0c0c0] win98-border h-[40vh] md:h-auto">
                                         <div className="bg-[#000080] text-white px-2 py-1 text-xs font-bold flex justify-between">
                                             <span>ОБСУЖДЕНИЕ.TXT</span>
                                             <span>{comments.filter(c => c.photo_id === viewingPhoto.id).length} МЫСЛЕЙ</span>
                                         </div>
                                         
-                                        {/* Список мыслей */}
                                         <div className="flex-1 bg-white overflow-y-auto p-2 text-sm border-2 border-inset border-gray-400">
                                             {comments.filter(c => c.photo_id === viewingPhoto.id).length > 0 ? (
                                                 comments.filter(c => c.photo_id === viewingPhoto.id).map(c => (
@@ -691,7 +738,6 @@
                                             )}
                                         </div>
                                         
-                                        {/* Форма добавления */}
                                         <form onSubmit={(e) => handleAddComment(e, viewingPhoto.id)} className="p-2 bg-[#c0c0c0] flex flex-col gap-2">
                                             <input 
                                                 value={commentName} 
